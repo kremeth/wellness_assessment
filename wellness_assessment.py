@@ -108,6 +108,7 @@ def get_quiz_analysis(customer_email):
 
 @app.route("/update-metafield/<string:customer_email>/<string:date>", methods=["POST"])
 def update_metafield(customer_email,date):
+    print('update_metafield')
     url = 'https://c50fca.myshopify.com'
     access_token= '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'
         # Get data from the request's body
