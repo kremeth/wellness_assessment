@@ -64,7 +64,6 @@ def get_product(product_name):
     url = 'https://c50fca.myshopify.com'
     access_token= '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'
     product, status_product = get_product_id(product_name)
-    print(product)
     productId = product["products"][0]["id"]
     #get_url = url + "/admin/api/2024-01/metafields.json?metafield['owner_id']="+str(customerId)
     #get_url = url + "/admin/api/2024-01/metafields.json?metafield[namespace]=quiz_analysis"
@@ -119,7 +118,6 @@ def update_metafield(customer_email,date):
 
     # Construct the URL for the POST request
     customer, status = get_customer_id(customer_email)
-    print(customer["customers"])
     customerId = customer["customers"][0]["id"]
     
     post_url = url + "/admin/api/2024-01/customers/"+str(customerId)+"/metafields.json"
