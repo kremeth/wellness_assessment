@@ -1,1 +1,1 @@
-web: gunicorn processWebhook:app
+web: gunicorn wellness_assessment:app
