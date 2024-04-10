@@ -12,7 +12,7 @@ app = Flask(__name__)
 def create_session():
     s=requests.Session()
     url = 'https://c50fca.myshopify.com'
-    access_token= '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'
+    access_token = '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'
     s.headers.update({
         "X-Shopify-Access-Token": access_token,
         "Content-Type" : "application/json"
@@ -23,7 +23,7 @@ def create_session():
 def get_customer_id(email):
     sess = create_session()
     url = 'https://c50fca.myshopify.com'
-    access_token= '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'
+    access_token = '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'
     search_url = url + "/admin/api/2024-01/customers/search.json?query=email:"+email
     try:
         resp = sess.get(search_url)
@@ -38,7 +38,7 @@ def get_customer_id(email):
 def get_product_id(name):
     sess = create_session()
     url = 'https://c50fca.myshopify.com'
-    access_token= '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'
+    access_token = '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'
     search_url = url + "/admin/api/2024-01/products.json?title="+name
     try:
         resp = sess.get(search_url)
@@ -53,7 +53,7 @@ def get_product_id(name):
 @app.route("/customer-id/<string:customer_email>", methods=["GET"])
 def get_customer(customer_email):
     url = 'https://c50fca.myshopify.com'
-    access_token= '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'
+    access_token = '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'
     # Construct the URL for the POST request
     resp, status = get_customer_id(customer_email)
     return resp, status
@@ -62,7 +62,7 @@ def get_customer(customer_email):
 @app.route("/get-product/<string:product_name>", methods=["GET"])
 def get_product(product_name):
     url = 'https://c50fca.myshopify.com'
-    access_token= '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'
+    access_token = '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'
     product, status_product = get_product_id(product_name)
     productId = product["products"][0]["id"]
     #get_url = url + "/admin/api/2024-01/metafields.json?metafield['owner_id']="+str(customerId)
@@ -87,7 +87,7 @@ def get_product(product_name):
 @app.route("/get_quiz_analysis/<string:customer_email>", methods=["GET"])
 def get_quiz_analysis(customer_email):
     url = 'https://c50fca.myshopify.com'
-    access_token= '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'
+    access_token = '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'
     customer, status_customer = get_customer_id(customer_email)
     customerId = customer["customers"][0]["id"]
     #get_url = url + "/admin/api/2024-01/metafields.json?metafield['owner_id']="+str(customerId)
@@ -109,7 +109,7 @@ def get_quiz_analysis(customer_email):
 def update_metafield(customer_email,date):
     print('update_metafield')
     url = 'https://c50fca.myshopify.com'
-    access_token= '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'
+    access_token = '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'
         # Get data from the request's body
     request_data = request.get_json()
 
