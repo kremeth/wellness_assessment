@@ -2,7 +2,11 @@ import requests
 from flask import Flask, request
 import json
 from flask_cors import CORS
-import os
+import osimport logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 
 app = Flask(__name__)
 
@@ -111,7 +115,7 @@ def update_metafield(customer_email,date):
 
     # Construct the URL for the POST request
     customer, status = get_customer_id(customer_email)
-    print(customer)
+    logger.info(f"Customer: {customer}")
     customerId = customer["customers"][0]["id"]
     
     post_url = url + "/admin/api/2024-01/customers/"+str(customerId)+"/metafields.json"
