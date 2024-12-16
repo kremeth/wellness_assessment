@@ -111,6 +111,7 @@ def update_metafield(customer_email,date):
 
     # Construct the URL for the POST request
     customer, status = get_customer_id(customer_email)
+    print(customer)
     customerId = customer["customers"][0]["id"]
     
     post_url = url + "/admin/api/2024-01/customers/"+str(customerId)+"/metafields.json"
