@@ -4,6 +4,7 @@ import json
 from flask_cors import CORS
 import os
 import logging
+import time
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -84,24 +85,39 @@ def get_product(product_name):
     
     
     
+
+
 @app.route("/get_quiz_analysis/<string:customer_email>", methods=["GET"])
 def get_quiz_analysis(customer_email):
     url = 'https://c50fca.myshopify.com'
-    customer, status_customer = get_customer_id(customer_email)
-    customerId = customer["customers"][0]["id"]
-    #get_url = url + "/admin/api/2024-01/metafields.json?metafield['owner_id']="+str(customerId)
-    #get_url = url + "/admin/api/2024-01/metafields.json?metafield[namespace]=quiz_analysis"
-    get_url = url + "/admin/api/2024-01/metafields.json?metafield[owner_id]="+str(customerId)+"&metafield[owner_resource]=customer&metafield[namespace]=quiz_analysis"
-    #get_url = url + "/admin/api/2024-01/customers/"+str(customerId)+"/metafields.json"
+    retry_attempts = 10  # Number of retry attempts
+    retry_delay = 2  # Delay in seconds between attempts
+
+    # Retry loop to wait for customer creation
+    for attempt in range(retry_attempts):
+        customer, status_customer = get_customer_id(customer_email)
+        if status_customer == 200 and customer.get("customers"):
+            customerId = customer["customers"][0]["id"]
+            break  # Customer exists, exit the loop
+        else:
+            print(f"Customer not found. Retry {attempt + 1}/{retry_attempts}...")
+            time.sleep(retry_delay)
+    else:
+        # If the loop completes without finding the customer
+        return {"error": f"Customer {customer_email} not found after multiple attempts."}, 404
+
+    # Once the customer exists, proceed to get the quiz analysis metafield
+    get_url = url + "/admin/api/2024-01/metafields.json?metafield[owner_id]=" + str(customerId) + "&metafield[owner_resource]=customer&metafield[namespace]=quiz_analysis"
+
     try:
         sess = create_session()
         response = sess.get(get_url)
-        response.raise_for_status()  # This will raise an exception for HTTP errors.
-        #print(resp.json())
-        return response.json(), 200  # Return the parsed JSON data and status code.ß
-    except requests.RequestException as e:  # This catches HTTP errors and other Request exceptions.
+        response.raise_for_status()
+        return response.json(), 200
+    except requests.RequestException as e:
         print(e)
         return {"error": str(e)}, 500
+
 
 
 @app.route("/update-metafield/<string:customer_email>/<string:date>", methods=["POST"])
