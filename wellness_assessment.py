@@ -105,42 +105,59 @@ def get_quiz_analysis(customer_email):
 
 
 @app.route("/update-metafield/<string:customer_email>/<string:date>", methods=["POST"])
-def update_metafield(customer_email,date):
+def update_metafield(customer_email, date):
     print('update_metafield')
     url = 'https://c50fca.myshopify.com'
-        # Get data from the request's body
     request_data = request.get_json()
-
-    # Create a session with headers
     sess = create_session()
 
-    # Construct the URL for the POST request
+    # Step 1: Check if the customer exists
     customer, status = get_customer_id(customer_email)
-    logger.info(f"Customer: {customer}")
-    customerId = customer["customers"][0]["id"]
-    
-    post_url = url + "/admin/api/2024-01/customers/"+str(customerId)+"/metafields.json"
+    if status != 200 or not customer.get("customers"):
+        # Step 2: If customer doesn't exist, create a new customer
+        print(f"Customer {customer_email} not found. Creating new customer...")
+        new_customer_data = {
+            "customer": {
+                "email": customer_email,
+                "accepts_marketing": True,
+                "tags": "quiz_user",
+                "first_name": "New",  # You can customize this
+                "last_name": "Customer"
+            }
+        }
+        create_customer_url = url + "/admin/api/2024-01/customers.json"
+        try:
+            response = sess.post(create_customer_url, json=new_customer_data)
+            response.raise_for_status()
+            customer = response.json()
+            customer_id = customer["customer"]["id"]
+            print(f"New customer created with ID: {customer_id}")
+        except requests.RequestException as e:
+            print(f"Error creating customer: {e}")
+            return {"error": "Failed to create new customer"}, 500
+    else:
+        customer_id = customer["customers"][0]["id"]
+        print(f"Existing customer found with ID: {customer_id}")
 
-    # Prepare the data for the metafield update
+    # Step 3: Update the metafield for the customer
+    post_url = url + f"/admin/api/2024-01/customers/{customer_id}/metafields.json"
     metafield_data = {
         "metafield": {
             "namespace": "quiz_analysis",
             "key": date,
             "value": json.dumps(request_data["value"]),
-            "type": "json_string",  # Make sure the type matches the type of the value
+            "type": "json_string"
         }
     }
-
-    # Make the POST request
-    response = sess.post(post_url, json=metafield_data)
-
-    # Check the response status and return the result
-    if response.status_code == 200 or response.status_code == 201:
-        # If the request was successful, return the JSON response from Shopify
+    try:
+        response = sess.post(post_url, json=metafield_data)
+        response.raise_for_status()
+        print("Metafield updated successfully.")
         return response.json(), 200
-    else:
-        # If the request failed, return the status code and error message
-        return {"error": response.text}, response.status_code
+    except requests.RequestException as e:
+        print(f"Error updating metafield: {e}")
+        return {"error": str(e)}, 500
+
     
     
 CORS(app)
