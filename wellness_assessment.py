@@ -28,7 +28,7 @@ def create_session():
 def get_customer_id(email):
     sess = create_session()
     url = 'https://c50fca.myshopify.com'
-    search_url = url + "/admin/api/2024-01/customers/search.json?query=email:"+email
+    search_url = url + "/admin/api/2025-01/customers/search.json?query=email:"+email
     try:
         resp = sess.get(search_url)
         resp.raise_for_status()  # This will raise an exception for HTTP errors.
@@ -42,7 +42,7 @@ def get_customer_id(email):
 def get_product_id(name):
     sess = create_session()
     url = 'https://c50fca.myshopify.com'
-    search_url = url + "/admin/api/2024-01/products.json?title="+name
+    search_url = url + "/admin/api/2025-01/products.json?title="+name
     try:
         resp = sess.get(search_url)
         resp.raise_for_status()  # This will raise an exception for HTTP errors.
@@ -66,10 +66,10 @@ def get_product(product_name):
     url = 'https://c50fca.myshopify.com'
     product, status_product = get_product_id(product_name)
     productId = product["products"][0]["id"]
-    #get_url = url + "/admin/api/2024-01/metafields.json?metafield['owner_id']="+str(customerId)
-    #get_url = url + "/admin/api/2024-01/metafields.json?metafield[namespace]=quiz_analysis"
-    get_url = url + "/admin/api/2024-01/products/"+str(productId)+"/images.json"
-    #get_url = url + "/admin/api/2024-01/customers/"+str(customerId)+"/metafields.json"
+    #get_url = url + "/admin/api/2025-01/metafields.json?metafield['owner_id']="+str(customerId)
+    #get_url = url + "/admin/api/2025-01/metafields.json?metafield[namespace]=quiz_analysis"
+    get_url = url + "/admin/api/2025-01/products/"+str(productId)+"/images.json"
+    #get_url = url + "/admin/api/2025-01/customers/"+str(customerId)+"/metafields.json"
     try:
         sess = create_session()
         response = sess.get(get_url)
@@ -107,7 +107,7 @@ def get_quiz_analysis(customer_email):
         return {"error": f"Customer {customer_email} not found after multiple attempts."}, 404
 
     # Once the customer exists, proceed to get the quiz analysis metafield
-    get_url = url + "/admin/api/2024-01/metafields.json?metafield[owner_id]=" + str(customerId) + "&metafield[owner_resource]=customer&metafield[namespace]=quiz_analysis"
+    get_url = url + "/admin/api/2025-01/metafields.json?metafield[owner_id]=" + str(customerId) + "&metafield[owner_resource]=customer&metafield[namespace]=quiz_analysis"
 
     try:
         sess = create_session()
@@ -141,7 +141,7 @@ def update_metafield(customer_email, date):
                 "last_name": "Customer"
             }
         }
-        create_customer_url = url + "/admin/api/2024-01/customers.json"
+        create_customer_url = url + "/admin/api/2025-01/customers.json"
         try:
             response = sess.post(create_customer_url, json=new_customer_data)
             response.raise_for_status()
@@ -156,7 +156,7 @@ def update_metafield(customer_email, date):
         print(f"Existing customer found with ID: {customer_id}")
 
     # Step 3: Update the metafield for the customer
-    post_url = url + f"/admin/api/2024-01/customers/{customer_id}/metafields.json"
+    post_url = url + f"/admin/api/2025-01/customers/{customer_id}/metafields.json"
     metafield_data = {
         "metafield": {
             "namespace": "quiz_analysis",
