@@ -174,6 +174,47 @@ def update_metafield(customer_email, date):
         print(f"Error updating metafield: {e}")
         return {"error": str(e)}, 500
 
+
+
+@app.route("/add-tags/<string:customer_email>", methods=["POST"])
+def add_tags(customer_email):
+    print('add_tags')
+    url = 'https://c50fca.myshopify.com'
+    request_data = request.get_json()
+    sess = create_session()
+
+    # Step 1: Check if the customer exists
+    customer, status = get_customer_id(customer_email)
+    if status != 200 or not customer.get("customers"):
+        print(f"Customer {customer_email} not found.")
+        return {"error": "Customer not found"}, 404
+
+    customer_id = customer["customers"][0]["id"]
+    print(f"Existing customer found with ID: {customer_id}")
+
+    # Step 2: Add tags to the existing customer
+    existing_tags = customer["customers"][0].get("tags", "")
+    new_tags = request_data.get("tags", [])
+    updated_tags = existing_tags.split(",") + new_tags
+    updated_tags = ",".join(set(updated_tags))  # Remove duplicates
+
+    update_customer_url = url + f"/admin/api/2025-01/customers/{customer_id}.json"
+    customer_data = {
+        "customer": {
+            "id": customer_id,
+            "tags": updated_tags
+        }
+    }
+    try:
+        response = sess.put(update_customer_url, json=customer_data)
+        response.raise_for_status()
+        print("Tags updated successfully.")
+        return response.json(), 200
+    except requests.RequestException as e:
+        print(f"Error updating tags: {e}")
+        return {"error": str(e)}, 500
+
+
     
     
 CORS(app)
