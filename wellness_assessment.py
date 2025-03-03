@@ -239,7 +239,7 @@ def remove_quiz_tags():
     existing_tags = customer["customers"][0].get("tags", "")
 
     # Step 2: Remove all tags that start with "quiz_"
-    updated_tags = [tag for tag in existing_tags.split(",") if not tag.strip().startswith("quiz_")]
+    updated_tags = [tag for tag in existing_tags.split(",") if not tag.strip().startswith("quiz")]
     updated_tags = ",".join(updated_tags)  # Convert back to string
 
     update_customer_url = url + f"/admin/api/2025-01/customers/{customer_id}.json"
@@ -259,6 +259,50 @@ def remove_quiz_tags():
         print(f"Error removing tags: {e}")
         return {"error": str(e)}, 500
 
+
+
+
+@app.route("/remove-recommendation-tags/<string:customer_email>", methods=["POST"])
+def remove_recommendation_tags(customer_email):
+    print('remove_recommendation_tags triggered')
+    url = 'https://c50fca.myshopify.com'
+    request_data = request.get_json()
+    
+
+    sess = create_session()
+
+    # Step 1: Check if the customer exists
+    customer, status = get_customer_id(customer_email)
+    if status != 200 or not customer.get("customers"):
+        print(f"Customer {customer_email} not found.")
+        return {"error": "Customer not found"}, 404
+
+    customer_id = customer["customers"][0]["id"]
+    existing_tags = customer["customers"][0].get("tags", "")
+
+    # Step 2: Remove all tags that start with "quiz_"
+    updated_tags = [tag for tag in existing_tags.split(",") if not tag.strip().startswith("recommendation")]
+    updated_tags = ",".join(updated_tags)  # Convert back to string
+
+    update_customer_url = url + f"/admin/api/2025-01/customers/{customer_id}.json"
+    customer_data = {
+        "customer": {
+            "id": customer_id,
+            "tags": updated_tags
+        }
+    }
+
+    try:
+        response = sess.put(update_customer_url, json=customer_data)
+        response.raise_for_status()
+        print(f"Removed recommendation tags from {customer_email}: {updated_tags}")
+        return {"message": "Recommendation tags removed successfully", "remaining_tags": updated_tags}, 200
+    except requests.RequestException as e:
+        print(f"Error removing tags: {e}")
+        return {"error": str(e)}, 500
+    
+    
+    
 
 
     
