@@ -11,6 +11,19 @@ logger = logging.getLogger(__name__)
 
 
 app = Flask(__name__)
+CORS(app)
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    print(f"Unhandled exception: {e}")
+    print(f"Exception type: {type(e)}")
+    import traceback
+    traceback.print_exc()
+    return {"error": f"Internal server error: {str(e)}"}, 500
+
+@app.route("/health", methods=["GET"])
+def health_check():
+    return {"status": "healthy", "message": "Server is running"}, 200
 
 
 
@@ -19,6 +32,10 @@ def create_session():
     s = requests.Session()
     url = 'https://c50fca.myshopify.com'
     access_token = os.getenv('SHOPIFY_ACCESS_TOKEN')
+    
+    if not access_token:
+        raise ValueError("SHOPIFY_ACCESS_TOKEN environment variable is not set")
+    
     s.headers.update({
         "X-Shopify-Access-Token": access_token,
         "Content-Type": "application/json"
@@ -26,7 +43,11 @@ def create_session():
     return s
     
 def get_customer_id(email):
-    sess = create_session()
+    try:
+        sess = create_session()
+    except ValueError as e:
+        return {"error": str(e)}, 500
+    
     url = 'https://c50fca.myshopify.com'
     search_url = url + "/admin/api/2025-01/customers/search.json?query=email:"+email
     try:
@@ -40,7 +61,11 @@ def get_customer_id(email):
     
     
 def get_product_id(name):
-    sess = create_session()
+    try:
+        sess = create_session()
+    except ValueError as e:
+        return {"error": str(e)}, 500
+    
     url = 'https://c50fca.myshopify.com'
     search_url = url + "/admin/api/2025-01/products.json?title="+name
     try:
@@ -65,6 +90,10 @@ def get_customer(customer_email):
 def get_product(product_name):
     url = 'https://c50fca.myshopify.com'
     product, status_product = get_product_id(product_name)
+    
+    if status_product != 200 or not product.get("products") or len(product["products"]) == 0:
+        return {"error": f"Product '{product_name}' not found"}, 404
+    
     productId = product["products"][0]["id"]
     #get_url = url + "/admin/api/2025-01/metafields.json?metafield['owner_id']="+str(customerId)
     #get_url = url + "/admin/api/2025-01/metafields.json?metafield[namespace]=quiz_analysis"
@@ -74,11 +103,22 @@ def get_product(product_name):
         sess = create_session()
         response = sess.get(get_url)
         response.raise_for_status()  # This will raise an exception for HTTP errors.
-        for image in response.json()['images']:
-            if image['position']==1:
-                resp=image
-        #print(resp.json())
-        return resp, 200  # Return the parsed JSON data and status code.ß
+        
+        images_data = response.json()
+        if not images_data.get('images') or len(images_data['images']) == 0:
+            return {"error": f"No images found for product '{product_name}'"}, 404
+            
+        resp = None
+        for image in images_data['images']:
+            if image.get('position') == 1:
+                resp = image
+                break
+        
+        if resp is None:
+            # If no image with position 1, return the first image
+            resp = images_data['images'][0]
+            
+        return resp, 200  # Return the parsed JSON data and status code.
     except requests.RequestException as e:  # This catches HTTP errors and other Request exceptions.
         print(e)
         return {"error": str(e)}, 500
@@ -122,10 +162,22 @@ def get_quiz_analysis(customer_email):
 
 @app.route("/update-metafield/<string:customer_email>/<string:date>", methods=["POST"])
 def update_metafield(customer_email, date):
-    print('update_metafield')
+    print(f'update_metafield called for email: {customer_email}, date: {date}')
     url = 'https://c50fca.myshopify.com'
-    request_data = request.get_json()
-    sess = create_session()
+    
+    try:
+        request_data = request.get_json()
+        if not request_data:
+            return {"error": "No JSON data provided"}, 400
+        if "value" not in request_data:
+            return {"error": "Missing 'value' field in request data"}, 400
+    except Exception as e:
+        return {"error": f"Invalid JSON data: {str(e)}"}, 400
+    
+    try:
+        sess = create_session()
+    except ValueError as e:
+        return {"error": str(e)}, 500
 
     # Step 1: Check if the customer exists
     customer, status = get_customer_id(customer_email)
@@ -165,13 +217,21 @@ def update_metafield(customer_email, date):
             "type": "json_string"
         }
     }
+    
+    print(f"Attempting to update metafield for customer {customer_id} with URL: {post_url}")
+    print(f"Metafield data: {metafield_data}")
+    
     try:
         response = sess.post(post_url, json=metafield_data)
+        print(f"Response status: {response.status_code}")
+        print(f"Response content: {response.text}")
         response.raise_for_status()
         print("Metafield updated successfully.")
         return response.json(), 200
     except requests.RequestException as e:
         print(f"Error updating metafield: {e}")
+        print(f"Response status: {getattr(e.response, 'status_code', 'No status code')}")
+        print(f"Response text: {getattr(e.response, 'text', 'No response text')}")
         return {"error": str(e)}, 500
 
 
@@ -180,8 +240,20 @@ def update_metafield(customer_email, date):
 def add_tags(customer_email):
     print('add_tags')
     url = 'https://c50fca.myshopify.com'
-    request_data = request.get_json()
-    sess = create_session()
+    
+    try:
+        request_data = request.get_json()
+        if not request_data:
+            return {"error": "No JSON data provided"}, 400
+        if "tags" not in request_data:
+            return {"error": "Missing 'tags' field in request data"}, 400
+    except Exception as e:
+        return {"error": f"Invalid JSON data: {str(e)}"}, 400
+    
+    try:
+        sess = create_session()
+    except ValueError as e:
+        return {"error": str(e)}, 500
 
     # Step 1: Check if the customer exists
     customer, status = get_customer_id(customer_email)
@@ -266,10 +338,18 @@ def remove_quiz_tags():
 def remove_recommendation_tags(customer_email):
     print('remove_recommendation_tags triggered')
     url = 'https://c50fca.myshopify.com'
-    request_data = request.get_json()
     
+    try:
+        request_data = request.get_json()
+        if not request_data:
+            return {"error": "No JSON data provided"}, 400
+    except Exception as e:
+        return {"error": f"Invalid JSON data: {str(e)}"}, 400
 
-    sess = create_session()
+    try:
+        sess = create_session()
+    except ValueError as e:
+        return {"error": str(e)}, 500
 
     # Step 1: Check if the customer exists
     customer, status = get_customer_id(customer_email)
@@ -307,8 +387,6 @@ def remove_recommendation_tags(customer_email):
 
     
     
-CORS(app)
-        
 if __name__ == "__main__":
     app.secret_key = 'ItIsASecret'
     app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
