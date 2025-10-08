@@ -360,7 +360,7 @@ def remove_recommendation_tags(customer_email):
     customer_id = customer["customers"][0]["id"]
     existing_tags = customer["customers"][0].get("tags", "")
 
-    # Step 2: Remove all tags that start with "quiz_"
+    # Step 2: Remove all tags that start with "recommendation"
     updated_tags = [tag for tag in existing_tags.split(",") if not tag.strip().startswith("recommendation")]
     updated_tags = ",".join(updated_tags)  # Convert back to string
 
@@ -379,6 +379,171 @@ def remove_recommendation_tags(customer_email):
         return {"message": "Recommendation tags removed successfully", "remaining_tags": updated_tags}, 200
     except requests.RequestException as e:
         print(f"Error removing tags: {e}")
+        return {"error": str(e)}, 500
+
+
+@app.route("/remove-cart-tags", methods=["POST"])
+def remove_cart_tags():
+    print('remove_cart_tags triggered')
+    url = 'https://c50fca.myshopify.com'
+    request_data = request.get_json()
+    
+    customer_email = request_data.get("email")
+    if not customer_email:
+        return {"error": "Email is required"}, 400
+
+    sess = create_session()
+
+    # Step 1: Check if the customer exists
+    customer, status = get_customer_id(customer_email)
+    if status != 200 or not customer.get("customers"):
+        print(f"Customer {customer_email} not found.")
+        return {"error": "Customer not found"}, 404
+
+    customer_id = customer["customers"][0]["id"]
+    existing_tags = customer["customers"][0].get("tags", "")
+
+    # Step 2: Remove all tags that start with "cart"
+    updated_tags = [tag for tag in existing_tags.split(",") if not tag.strip().startswith("cart")]
+    updated_tags = ",".join(updated_tags)  # Convert back to string
+
+    update_customer_url = url + f"/admin/api/2025-01/customers/{customer_id}.json"
+    customer_data = {
+        "customer": {
+            "id": customer_id,
+            "tags": updated_tags
+        }
+    }
+
+    try:
+        response = sess.put(update_customer_url, json=customer_data)
+        response.raise_for_status()
+        print(f"Removed cart tags from {customer_email}: {updated_tags}")
+        return {"message": "Cart tags removed successfully", "remaining_tags": updated_tags}, 200
+    except requests.RequestException as e:
+        print(f"Error removing tags: {e}")
+        return {"error": str(e)}, 500
+
+
+@app.route("/remove-tags/<string:customer_email>", methods=["POST"])
+def remove_tags(customer_email):
+    print('remove_tags triggered')
+    url = 'https://c50fca.myshopify.com'
+    
+    try:
+        request_data = request.get_json()
+        if not request_data:
+            return {"error": "No JSON data provided"}, 400
+        if "tags" not in request_data:
+            return {"error": "Missing 'tags' field in request data"}, 400
+    except Exception as e:
+        return {"error": f"Invalid JSON data: {str(e)}"}, 400
+    
+    try:
+        sess = create_session()
+    except ValueError as e:
+        return {"error": str(e)}, 500
+
+    # Step 1: Check if the customer exists
+    customer, status = get_customer_id(customer_email)
+    if status != 200 or not customer.get("customers"):
+        print(f"Customer {customer_email} not found.")
+        return {"error": "Customer not found"}, 404
+
+    customer_id = customer["customers"][0]["id"]
+    existing_tags = customer["customers"][0].get("tags", "")
+    tags_to_remove = request_data.get("tags", [])
+
+    # Step 2: Remove specified tags from the customer
+    existing_tags_list = [tag.strip() for tag in existing_tags.split(",") if tag.strip()]
+    tags_to_remove_set = set(tags_to_remove)
+    
+    # Filter out tags that are in the removal list
+    updated_tags_list = [tag for tag in existing_tags_list if tag not in tags_to_remove_set]
+    updated_tags = ",".join(updated_tags_list)  # Convert back to string
+
+    update_customer_url = url + f"/admin/api/2025-01/customers/{customer_id}.json"
+    customer_data = {
+        "customer": {
+            "id": customer_id,
+            "tags": updated_tags
+        }
+    }
+
+    try:
+        response = sess.put(update_customer_url, json=customer_data)
+        response.raise_for_status()
+        removed_tags = [tag for tag in tags_to_remove if tag in existing_tags_list]
+        print(f"Removed tags from {customer_email}: {removed_tags}")
+        return {
+            "message": "Tags removed successfully",
+            "removed_tags": removed_tags,
+            "remaining_tags": updated_tags
+        }, 200
+    except requests.RequestException as e:
+        print(f"Error removing tags: {e}")
+        return {"error": str(e)}, 500
+
+
+@app.route("/update-cart-supplement-tags/<string:customer_email>", methods=["POST"])
+def update_cart_supplements_tags(customer_email):
+    print('update_cart_supplements_tags triggered')
+    url = 'https://c50fca.myshopify.com'
+    
+    try:
+        request_data = request.get_json()
+        if not request_data:
+            return {"error": "No JSON data provided"}, 400
+        if "tags" not in request_data:
+            return {"error": "Missing 'tags' field in request data"}, 400
+    except Exception as e:
+        return {"error": f"Invalid JSON data: {str(e)}"}, 400
+    
+    try:
+        sess = create_session()
+    except ValueError as e:
+        return {"error": str(e)}, 500
+
+    # Step 1: Check if the customer exists
+    customer, status = get_customer_id(customer_email)
+    if status != 200 or not customer.get("customers"):
+        print(f"Customer {customer_email} not found.")
+        return {"error": "Customer not found"}, 404
+
+    customer_id = customer["customers"][0]["id"]
+    existing_tags = customer["customers"][0].get("tags", "")
+    new_tags = request_data.get("tags", [])
+
+    # Step 2: Remove all tags that start with "cart_supplement"
+    existing_tags_list = [tag.strip() for tag in existing_tags.split(",") if tag.strip()]
+    filtered_tags = [tag for tag in existing_tags_list if not tag.startswith("cart_supplement")]
+    
+    # Step 3: Add new tags
+    updated_tags_list = filtered_tags + new_tags
+    updated_tags = ",".join(set(updated_tags_list))  # Remove duplicates
+
+    update_customer_url = url + f"/admin/api/2025-01/customers/{customer_id}.json"
+    customer_data = {
+        "customer": {
+            "id": customer_id,
+            "tags": updated_tags
+        }
+    }
+
+    try:
+        response = sess.put(update_customer_url, json=customer_data)
+        response.raise_for_status()
+        removed_tags = [tag for tag in existing_tags_list if tag.startswith("cart_supplement")]
+        print(f"Removed cart_ tags from {customer_email}: {removed_tags}")
+        print(f"Added new tags to {customer_email}: {new_tags}")
+        return {
+            "message": "Cart supplement tags updated successfully",
+            "removed_tags": removed_tags,
+            "added_tags": new_tags,
+            "all_tags": updated_tags
+        }, 200
+    except requests.RequestException as e:
+        print(f"Error updating tags: {e}")
         return {"error": str(e)}, 500
     
     
