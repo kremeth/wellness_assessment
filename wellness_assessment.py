@@ -227,6 +227,34 @@ def update_metafield(customer_email, date):
         print(f"Response content: {response.text}")
         response.raise_for_status()
         print("Metafield updated successfully.")
+        
+        # After successful metafield update, send quiz recap email
+        try:
+            print(f"Sending quiz recap email to {customer_email}...")
+            quiz_recap_url = "https://us-central1-nutricodeapp-3da5f.cloudfunctions.net/sendQuizRecapEmail"
+            
+            quiz_recap_payload = {
+                "customer_email": customer_email,
+                "quiz_data": request_data["value"]
+            }
+            
+            quiz_recap_response = requests.post(quiz_recap_url, json=quiz_recap_payload, timeout=30)
+            quiz_recap_response.raise_for_status()
+            
+            quiz_recap_result = quiz_recap_response.json()
+            if quiz_recap_result.get("success"):
+                print(f"✅ Quiz recap email sent successfully to {customer_email}")
+                print(f"Email ID: {quiz_recap_result.get('data', {}).get('message_id', 'N/A')}")
+            else:
+                print(f"⚠️ Quiz recap email failed: {quiz_recap_result.get('error', 'Unknown error')}")
+                
+        except requests.RequestException as email_error:
+            print(f"⚠️ Error sending quiz recap email: {email_error}")
+            # Don't fail the main request if email fails
+        except Exception as email_error:
+            print(f"⚠️ Unexpected error sending quiz recap email: {email_error}")
+            # Don't fail the main request if email fails
+        
         return response.json(), 200
     except requests.RequestException as e:
         print(f"Error updating metafield: {e}")
